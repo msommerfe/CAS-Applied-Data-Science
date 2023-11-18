@@ -3,7 +3,15 @@ import scipy.stats
 import matplotlib.pyplot as plt
 import plotly.express as px
 import pandas as pd
+import umap
 from IPython.display import display
+from sklearn.datasets import make_blobs
+from sklearn.model_selection import train_test_split
+from sklearn import metrics
+from sklearn.mixture import GaussianMixture
+
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
 pd.set_option('display.max_columns', None)
 pd.set_option('expand_frame_repr', False)
 
@@ -16,8 +24,14 @@ dfPubliBikeAvailability["dayofweek"] = dfPubliBikeAvailability["timestamp"].dt.w
 dfPubliBikeAvailability["hourofday"] = dfPubliBikeAvailability["timestamp"].dt.hour
 dfPubliBikeAvailability["minuteofday"] = dfPubliBikeAvailability["timestamp"].dt.minute
 dfPubliBikeAvailability['station_id'] = dfPubliBikeAvailability['stationsname'].astype('category').cat.codes
-print(dfPubliBikeAvailability)
+dfPubliBikeAvailability['available_y1_n0'] = [1 if (i > 0) else 0 for i in dfPubliBikeAvailability['anzahl_e_bikes']]
 
+
+
+print(dfPubliBikeAvailability['available_y1_n0'])
+print(dfPubliBikeAvailability)
+print("MAX")
+print(dfPubliBikeAvailability['anzahl_e_bikes'].max())
 
 
 #############################################################################################
@@ -45,10 +59,12 @@ rangeTrain= int(np.round(dfPubliBikeAvailability.shape[0] * percentTrain))
 
 #split data tran and test
 dfFeatureTrainPB = dfPubliBikeAvailability[['station_id','dayofweek','hourofday','minuteofday']][:rangeTrain]
-dfLabelsTrainPB = dfPubliBikeAvailability[['anzahl_e_bikes']][:rangeTrain]
+#dfLabelsTrainPB = dfPubliBikeAvailability[['anzahl_e_bikes']][:rangeTrain]
+dfLabelsTrainPB = dfPubliBikeAvailability[['available_y1_n0']][:rangeTrain]
 
 dfFeaturesTestPB =  dfPubliBikeAvailability[['station_id','dayofweek','hourofday','minuteofday']][rangeTrain:]
-dfLabelsTestPB =  dfPubliBikeAvailability[['anzahl_e_bikes']][rangeTrain:]
+#dfLabelsTestPB =  dfPubliBikeAvailability[['anzahl_e_bikes']][rangeTrain:]
+dfLabelsTestPB =  dfPubliBikeAvailability[['available_y1_n0']][rangeTrain:]
 print(dfFeatureTrainPB.shape)
 print(type(dfFeatureTrainPB))
 
@@ -74,3 +90,7 @@ print(dfLabelsTrainPB)
 
 
 #### Cluster Ansatz. Gruppen sind die Anzahl Bikes und input ist TimeStamp + Location Name #######
+umap_model = umap.UMAP(n_neighbors=10, n_components=2, random_state=1000)
+umap_mnist = umap_model.fit_transform(dfFeatureTrainPB)
+plt.scatter(umap_mnist[:, 0], umap_mnist[:, 1], c=dfLabelsTrainPB, s=2)
+plt.show()
