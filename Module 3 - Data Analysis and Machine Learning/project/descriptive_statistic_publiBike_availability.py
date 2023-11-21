@@ -35,8 +35,8 @@ dfPubliBikeAvailability['lable_availability'] = dfPubliBikeAvailability['anzahl_
 dfPubliBikeAvailability = dfPubliBikeAvailability[dfPubliBikeAvailability["stationsname"] == "Sattler-Gelateria"]
 
 #Genau eine Woche als INput nehmen. Einfach auskommentieren falls alle Daten (2 Wochen) verwendet werden sollen
-dfPubliBikeAvailability = dfPubliBikeAvailability['2023-05-02T00:00:00+00:00' < dfPubliBikeAvailability["timestamp"]]
-dfPubliBikeAvailability = dfPubliBikeAvailability[dfPubliBikeAvailability["timestamp"] < '2023-05-09T00:00:00+00:00' ]
+dfPubliBikeAvailability = dfPubliBikeAvailability['2023-05-01T00:00:00+00:00' < dfPubliBikeAvailability["timestamp"]]
+dfPubliBikeAvailability = dfPubliBikeAvailability[dfPubliBikeAvailability["timestamp"] < '2023-05-08T00:00:00+00:00' ]
 
 #Assining the availability into 3 Groups;  Group "0" --> Available bikes = 0; Group "1" --> Available bikes = 1-2
 dfPubliBikeAvailability['lable_availability'] = [0 if (i<2) else i for i in dfPubliBikeAvailability['lable_availability']]
@@ -93,23 +93,23 @@ plt.show()
 #Set up a model. here we can play a lot
 model = tf.keras.models.Sequential([
     tf.keras.layers.Flatten(input_shape=(4,)),
-    tf.keras.layers.Dense(1000, activation=tf.keras.layers.LeakyReLU()),
     tf.keras.layers.Dense(10000, activation=tf.keras.layers.LeakyReLU()),
-    tf.keras.layers.Dense(12, activation=tf.keras.layers.LeakyReLU()),
-#    tf.keras.layers.Dense(512, activation=tf.keras.layers.LeakyReLU()),
-#    tf.keras.layers.Dense(64, activation=tf.keras.layers.LeakyReLU()),
-#    tf.keras.layers.Dense(16, activation=tf.keras.layers.LeakyReLU()),
-#    tf.keras.layers.Dense(8, activation=tf.keras.layers.LeakyReLU()),
+    tf.keras.layers.Dense(500, activation=tf.keras.layers.LeakyReLU()),
     tf.keras.layers.Dense(3, activation='softmax'),
 ])
+'''model.compile(optimizer='adam',
+              loss='sparse_categorical_crossentropy',
+              metrics=['mse'])
+'''
 
 model.compile(optimizer='adam',
               loss='sparse_categorical_crossentropy',
               metrics=['accuracy'])
+
 print(model.summary())
 
 #Train the model
-availability = model.fit(dfFeatureTrainPB, dfLabelsTrainPB, epochs=400, batch_size=500, validation_data=(dfFeaturesTestPB, dfLabelsTestPB))
+availability = model.fit(dfFeatureTrainPB, dfLabelsTrainPB, epochs=500, batch_size=10, validation_data=(dfFeaturesTestPB, dfLabelsTestPB))
 
 
 #Ploting the error over epochs
@@ -117,6 +117,8 @@ fig, axs = plt.subplots(1, 2, figsize=(10,5))
 axs[0].plot(availability.epoch, availability.history['loss'])
 axs[0].plot(availability.epoch, availability.history['val_loss'])
 axs[0].legend(('training loss', 'validation loss'), loc='lower right')
+#axs[1].plot(availability.epoch, availability.history['mse'])
+#axs[1].plot(availability.epoch, availability.history['val_mse'])
 axs[1].plot(availability.epoch, availability.history['accuracy'])
 axs[1].plot(availability.epoch, availability.history['val_accuracy'])
 axs[1].legend(('training accuracy', 'validation accuracy'), loc='lower right')
@@ -131,7 +133,7 @@ predict = model.predict(dfFeaturesTestPB)
 predict = pd.DataFrame(predict)
 
 #plotting the calculated availability over hours
-fig = px.scatter(x=dfFeaturesTestPB[:,2], y = predict.idxmax(axis='columns').values, )
+fig = px.scatter(x=dfFeaturesTestPB[:,2], y = predict.idxmax(axis='columns').values,trendline="lowess", trendline_options=dict(frac=0.3))
 fig.show()
 
 
