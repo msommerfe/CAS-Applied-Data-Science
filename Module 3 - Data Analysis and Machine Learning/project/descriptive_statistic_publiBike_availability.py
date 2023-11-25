@@ -7,68 +7,81 @@ import pandas as pd
 import umap
 import plotly.express as px
 from IPython.display import display
-
+from sklearn.model_selection import train_test_split
+from calendar import day_name
+import matplotlib.dates as mdates
 
 pd.set_option('display.max_columns', None)
 pd.set_option('expand_frame_repr', True)
 
-#Reading Publi-e-bike availability data
-dfPubliBikeAvailability = pd.read_csv("data/publi-e-bike-availability-bern.csv", encoding='latin-1', sep=';')
 
-#Prepareing Data
-# TODO---> Vielleicht auch nur mal genau eine Woche nutzen zum trainieren der Daten, da eine Woche ein recht gutes Pattern ist.
-dfPubliBikeAvailability = dfPubliBikeAvailability.rename(columns={"filename": "timestamp"})
-dfPubliBikeAvailability["timestamp"] = pd.to_datetime(dfPubliBikeAvailability["timestamp"])
+#Reading Publi-e-bike availability data 1 Year
+dfPubliBikeAvailability = pd.read_csv("data/bike-availability-All-Stations_hourly.csv", encoding='latin-1', sep=';')
+dfPubliBikeAvailability["timestamp"] = pd.to_datetime(dfPubliBikeAvailability["Abfragezeit"])
+dfPubliBikeAvailability.set_index('timestamp')
 dfPubliBikeAvailability["dayofweek"] = dfPubliBikeAvailability["timestamp"].dt.weekday
+dfPubliBikeAvailability['dayofweek_name'] = dfPubliBikeAvailability['dayofweek'].apply(lambda w:day_name[w])
 dfPubliBikeAvailability["hourofday"] = dfPubliBikeAvailability["timestamp"].dt.hour
-dfPubliBikeAvailability["minuteofday"] = dfPubliBikeAvailability["timestamp"].dt.minute
-dfPubliBikeAvailability['station_id'] = dfPubliBikeAvailability['stationsname'].astype('category').cat.codes
+dfPubliBikeAvailability['station_id'] = dfPubliBikeAvailability['id']
+dfPubliBikeAvailability['anzahl_e_bikes'] = dfPubliBikeAvailability['EBike']
+dfPubliBikeAvailability['anzahl_bikes'] = dfPubliBikeAvailability['Bike']
+dfPubliBikeAvailability["continuous_week_hours"] = dfPubliBikeAvailability['dayofweek'] * 24 + dfPubliBikeAvailability['hourofday']
 
 
 
 
 
-# Want to have 3 Groups with simular distribution. First Group "0" --> Available bikes = 0; Group "1" --> Available bikes = 1-2
-dfPubliBikeAvailability['lable_availability'] = dfPubliBikeAvailability['anzahl_e_bikes']
+#prepare and Clean Data
+#Choose only the Station 230 = "Sattler-Gelateria"
+dfPubliBikeAvailability = dfPubliBikeAvailability[dfPubliBikeAvailability["station_id"] == 230 ]
 
-#First Train just one Station. If you want do train all, just comment the following line
-dfPubliBikeAvailability = dfPubliBikeAvailability[dfPubliBikeAvailability["stationsname"] == "Sattler-Gelateria"]
 
-#Genau eine Woche als INput nehmen. Einfach auskommentieren falls alle Daten (2 Wochen) verwendet werden sollen
-dfPubliBikeAvailability = dfPubliBikeAvailability['2023-05-01T00:00:00+00:00' < dfPubliBikeAvailability["timestamp"]]
-dfPubliBikeAvailability = dfPubliBikeAvailability[dfPubliBikeAvailability["timestamp"] < '2023-05-08T00:00:00+00:00' ]
+#Select the relevant data for the basi season (15.05 - 15.09)
+dfPubliBikeAvailability = dfPubliBikeAvailability[pd.to_datetime('2023-05-15 00:00:00') < dfPubliBikeAvailability["timestamp"]]
+dfPubliBikeAvailability = dfPubliBikeAvailability[dfPubliBikeAvailability["timestamp"] < pd.to_datetime('2023-09-16 00:00:00') ]
+
+#Stündlicher Mean eines Tages über alle Daten im dfPubliBikeAvailability
+fig = px.scatter(dfPubliBikeAvailability.groupby(dfPubliBikeAvailability["timestamp"].dt.hour)['anzahl_e_bikes'].mean(),trendline="lowess", trendline_options=dict(frac=0.05))
+fig.show()
+
+#Täglicher Mean einer Woche über alle Daten im dfPubliBikeAvailability
+fig = px.scatter(dfPubliBikeAvailability.groupby(dfPubliBikeAvailability["timestamp"].dt.weekday)['anzahl_e_bikes'].mean(),trendline="lowess", trendline_options=dict(frac=0.05))
+fig.show()
+
+
 
 #Assining the availability into 3 Groups;  Group "0" --> Available bikes = 0; Group "1" --> Available bikes = 1-2
+# Following line helped me to fine 3 Groups that has a almoat equal distribution (0-q33, q33-q66, q66-q100) --> pd.qcut(dfPubliBikeAvailability['anzahl_e_bikes'],3, precision=0 )
+dfPubliBikeAvailability['lable_availability'] = dfPubliBikeAvailability['anzahl_e_bikes']
 dfPubliBikeAvailability['lable_availability'] = [0 if (i<2) else i for i in dfPubliBikeAvailability['lable_availability']]
-dfPubliBikeAvailability['lable_availability'] = [1 if (1<i<5) else i for i in dfPubliBikeAvailability['lable_availability']]
-dfPubliBikeAvailability['lable_availability'] = [2 if (i>4) else i for i in dfPubliBikeAvailability['lable_availability']]
+dfPubliBikeAvailability['lable_availability'] = [1 if (1<i<6) else i for i in dfPubliBikeAvailability['lable_availability']]
+dfPubliBikeAvailability['lable_availability'] = [2 if (i>5) else i for i in dfPubliBikeAvailability['lable_availability']]
 
 #Plot availability Groups over Time
 fig = px.line(y=dfPubliBikeAvailability["lable_availability"], x=dfPubliBikeAvailability["timestamp"])
 fig.show()
 
+# Ploting Trendlinie for one Week 1. with Number of bikes 2. With availability Groups
+fig = px.scatter(x = dfPubliBikeAvailability["continuous_week_hours"], y = dfPubliBikeAvailability['anzahl_e_bikes'], trendline="lowess", trendline_options=dict(frac=0.02))
+fig.show()
+fig = px.scatter(x = dfPubliBikeAvailability["continuous_week_hours"], y = dfPubliBikeAvailability['lable_availability'], trendline="lowess", trendline_options=dict(frac=0.02))
+fig.show()
+
 #Plot the histogram of availability just to see if the distribution over the three availavility groups is simular
-plt.hist(dfPubliBikeAvailability['lable_availability'], fill=False, histtype='step', label="length", density="True", bins = 100)
-plt.show()
+#plt.hist(dfPubliBikeAvailability['lable_availability'], fill=False, histtype='step', label="length", density="True", bins = 100)
+#plt.show()
 
 
 
 #############################################################################################
 ######  Preparing Data for Training. Split in Train and Test Data  ##########################
-######  Feature: [dayofweek, hour, Min, Stationname] Label:  anzahl_e_bikes     ##############
+######  Feature: [dayofweek, hour] Label:  anzahl_e_bikes     ##############
 #############################################################################################
 
-# First shuffle rows then split into train and test data based on percentTrain
-dfPubliBikeAvailability = sklearn.utils.shuffle(dfPubliBikeAvailability)
-print(dfPubliBikeAvailability)
-percentTrain = 0.8
-rangeTrain= int(np.round(dfPubliBikeAvailability.shape[0] * percentTrain))
-
-#split data tran and test
-dfFeatureTrainPB = dfPubliBikeAvailability[['station_id','dayofweek','hourofday','minuteofday']][:rangeTrain]
-dfLabelsTrainPB = dfPubliBikeAvailability[['lable_availability']][:rangeTrain]
-dfFeaturesTestPB =  dfPubliBikeAvailability[['station_id','dayofweek','hourofday','minuteofday']][rangeTrain:]
-dfLabelsTestPB =  dfPubliBikeAvailability[['lable_availability']][rangeTrain:]
+dfFeatureTrainPB, dfFeaturesTestPB, dfLabelsTrainPB, dfLabelsTestPB = train_test_split(
+    dfPubliBikeAvailability[['dayofweek','hourofday']],
+    dfPubliBikeAvailability[['lable_availability']],
+    test_size=0.2, random_state=42)
 
 
 #Convert to numpy array because tensorflow just accepts numpy arrays
@@ -79,28 +92,15 @@ dfLabelsTestPB = dfLabelsTestPB['lable_availability'].to_numpy()
 
 
 
-
-#### Cluster Ansatz. Gruppen sind die Anzahl Bikes und input ist TimeStamp + Location Name But somehow werde ich nicht schlau aus dem Ergebnis,...Uncomment to test it #######
-'''umap_model = umap.UMAP(n_neighbors=15, n_components=2, random_state=100)
-umap_PB = umap_model.fit_transform(dfFeatureTrainPB)
-plt.scatter(umap_PB[:, 0], umap_PB[:, 1], c=dfLabelsTrainPB, s=2)
-plt.show()
-'''
-
-
-
-
 #Set up a model. here we can play a lot
+#@Todo: erste Layer mal Probieren ohne Flatten. Flatten bei mehrdimensional sinnvoll aber sind ja hier schon 1-dim
 model = tf.keras.models.Sequential([
-    tf.keras.layers.Flatten(input_shape=(4,)),
+    tf.keras.layers.Flatten(input_shape=(2,)),
     tf.keras.layers.Dense(10000, activation=tf.keras.layers.LeakyReLU()),
+    tf.keras.layers.Dense(1000, activation=tf.keras.layers.LeakyReLU()),
     tf.keras.layers.Dense(500, activation=tf.keras.layers.LeakyReLU()),
     tf.keras.layers.Dense(3, activation='softmax'),
 ])
-'''model.compile(optimizer='adam',
-              loss='sparse_categorical_crossentropy',
-              metrics=['mse'])
-'''
 
 model.compile(optimizer='adam',
               loss='sparse_categorical_crossentropy',
@@ -109,7 +109,7 @@ model.compile(optimizer='adam',
 print(model.summary())
 
 #Train the model
-availability = model.fit(dfFeatureTrainPB, dfLabelsTrainPB, epochs=500, batch_size=10, validation_data=(dfFeaturesTestPB, dfLabelsTestPB))
+availability = model.fit(dfFeatureTrainPB, dfLabelsTrainPB, epochs=500, batch_size=2000, validation_data=(dfFeaturesTestPB, dfLabelsTestPB))
 
 
 #Ploting the error over epochs
@@ -132,12 +132,13 @@ print(model.evaluate(dfFeaturesTestPB,  dfLabelsTestPB, verbose=2))
 predict = model.predict(dfFeaturesTestPB)
 predict = pd.DataFrame(predict)
 
-#plotting the calculated availability over hours
-fig = px.scatter(x=dfFeaturesTestPB[:,2], y = predict.idxmax(axis='columns').values,trendline="lowess", trendline_options=dict(frac=0.3))
+
+#Preparing data for plotting
+dfTrained= pd.DataFrame()
+dfTrained['x'] = dfFeaturesTestPB[:,0]*24 +dfFeaturesTestPB[:,1]
+dfTrained['yTest'] = dfLabelsTestPB
+dfTrained['yPredict'] = predict.idxmax(axis='columns').values
+
+# Plotting Testdata and Preidcted Data over Week inkluding a trendline
+fig = px.scatter(dfTrained, x = 'x', y = ['yTest', 'yPredict'],trendline="lowess", trendline_options=dict(frac=0.04))
 fig.show()
-
-
-# Hoi Viki,...habe jetzt recht viel mit den Parametern rumgespielt aber irgendwie finde ich die Ergebnisse nicht so befriedigend. Vielleicht müssen wir uns mal die Timeseries anschauen (https://www.tensorflow.org/tutorials/structured_data/time_series)
-# Vielleicht fällt Dir ja noch etwas ein. Ansonsten spiele gerne mal mit den Parametern und den Modell rum. Vielleicht kannst auch noch was an den input/output daten optimieren falls dir eine Idee kommt.
-#Ich würde mal für heute abschliessen
-
