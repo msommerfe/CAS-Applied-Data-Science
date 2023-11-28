@@ -52,25 +52,27 @@ fig.show()
 
 #Assining the availability into 3 Groups;  Group "0" --> Available bikes = 0; Group "1" --> Available bikes = 1-2
 # Following line helped me to fine 3 Groups that has a almoat equal distribution (0-q33, q33-q66, q66-q100) --> pd.qcut(dfPubliBikeAvailability['anzahl_e_bikes'],3, precision=0 )
-dfPubliBikeAvailability['lable_availability'] = dfPubliBikeAvailability['anzahl_e_bikes']
-dfPubliBikeAvailability['lable_availability'] = [0 if (i<2) else i for i in dfPubliBikeAvailability['lable_availability']]
-dfPubliBikeAvailability['lable_availability'] = [1 if (1<i<6) else i for i in dfPubliBikeAvailability['lable_availability']]
-dfPubliBikeAvailability['lable_availability'] = [2 if (i>5) else i for i in dfPubliBikeAvailability['lable_availability']]
+dfPubliBikeAvailability['availability_group'] = dfPubliBikeAvailability['anzahl_e_bikes']
+dfPubliBikeAvailability['availability_group'] = [0 if (i<2) else i for i in dfPubliBikeAvailability['availability_group']]
+dfPubliBikeAvailability['availability_group'] = [1 if (1<i<6) else i for i in dfPubliBikeAvailability['availability_group']]
+dfPubliBikeAvailability['availability_group'] = [2 if (i>5) else i for i in dfPubliBikeAvailability['availability_group']]
 
 #Plot availability Groups over Time
-fig = px.line(y=dfPubliBikeAvailability["lable_availability"], x=dfPubliBikeAvailability["timestamp"])
+fig = px.line(y=dfPubliBikeAvailability["availability_group"], x=dfPubliBikeAvailability["timestamp"])
+fig.show()
+
+fig = px.scatter(dfPubliBikeAvailability, x = 'timestamp', y = ['anzahl_e_bikes', 'availability_group'],
+                 labels={"timestamp": "Timestamp","value": "Availability"},
+                 title = "Availability Data 15.05.2023 - 15.09.2023",
+                 trendline="lowess", trendline_options=dict(frac=0.04))
 fig.show()
 
 # Ploting Trendlinie for one Week 1. with Number of bikes 2. With availability Groups
-fig = px.scatter(x = dfPubliBikeAvailability["continuous_week_hours"], y = dfPubliBikeAvailability['anzahl_e_bikes'], trendline="lowess", trendline_options=dict(frac=0.02))
+fig = px.scatter(dfPubliBikeAvailability, x = 'continuous_week_hours', y = ['anzahl_e_bikes', 'availability_group'],
+                 labels={"continuous_week_hours": "Continous hours of a week","value": "Availability"},
+                 title = "Smoothed median 15.05.2023 - 15.09.2023 reduced to a Week",
+                 trendline="lowess", trendline_options=dict(frac=0.04))
 fig.show()
-fig = px.scatter(x = dfPubliBikeAvailability["continuous_week_hours"], y = dfPubliBikeAvailability['lable_availability'], trendline="lowess", trendline_options=dict(frac=0.02))
-fig.show()
-
-#Plot the histogram of availability just to see if the distribution over the three availavility groups is simular
-#plt.hist(dfPubliBikeAvailability['lable_availability'], fill=False, histtype='step', label="length", density="True", bins = 100)
-#plt.show()
-
 
 
 #############################################################################################
@@ -78,17 +80,18 @@ fig.show()
 ######  Feature: [dayofweek, hour] Label:  anzahl_e_bikes     ##############
 #############################################################################################
 
+#@TODO: Statt ['dayofweek','hourofday'] try to use ['continuous_week_hours'] cwould be just one parameter to train --> No it even get worse :-/. Dont know why
 dfFeatureTrainPB, dfFeaturesTestPB, dfLabelsTrainPB, dfLabelsTestPB = train_test_split(
     dfPubliBikeAvailability[['dayofweek','hourofday']],
-    dfPubliBikeAvailability[['lable_availability']],
+    dfPubliBikeAvailability[['availability_group']],
     test_size=0.2, random_state=42)
 
 
 #Convert to numpy array because tensorflow just accepts numpy arrays
 dfFeatureTrainPB = dfFeatureTrainPB.to_numpy()
-dfLabelsTrainPB = dfLabelsTrainPB['lable_availability'].to_numpy()
+dfLabelsTrainPB = dfLabelsTrainPB['availability_group'].to_numpy()
 dfFeaturesTestPB = dfFeaturesTestPB.to_numpy()
-dfLabelsTestPB = dfLabelsTestPB['lable_availability'].to_numpy()
+dfLabelsTestPB = dfLabelsTestPB['availability_group'].to_numpy()
 
 
 
@@ -96,9 +99,10 @@ dfLabelsTestPB = dfLabelsTestPB['lable_availability'].to_numpy()
 #@Todo: erste Layer mal Probieren ohne Flatten. Flatten bei mehrdimensional sinnvoll aber sind ja hier schon 1-dim
 model = tf.keras.models.Sequential([
     tf.keras.layers.Flatten(input_shape=(2,)),
-    tf.keras.layers.Dense(10000, activation=tf.keras.layers.LeakyReLU()),
-    tf.keras.layers.Dense(1000, activation=tf.keras.layers.LeakyReLU()),
-    tf.keras.layers.Dense(500, activation=tf.keras.layers.LeakyReLU()),
+    tf.keras.layers.Dense(1000, activation='relu'),
+    tf.keras.layers.Dense(10000, activation='relu'),
+    tf.keras.layers.Dense(1000, activation='relu'),
+    tf.keras.layers.Dense(12, activation='relu'),
     tf.keras.layers.Dense(3, activation='softmax'),
 ])
 
@@ -109,7 +113,7 @@ model.compile(optimizer='adam',
 print(model.summary())
 
 #Train the model
-availability = model.fit(dfFeatureTrainPB, dfLabelsTrainPB, epochs=500, batch_size=2000, validation_data=(dfFeaturesTestPB, dfLabelsTestPB))
+availability = model.fit(dfFeatureTrainPB, dfLabelsTrainPB, epochs=2000, batch_size=5000, validation_data=(dfFeaturesTestPB, dfLabelsTestPB))
 
 
 #Ploting the error over epochs
@@ -141,4 +145,11 @@ dfTrained['yPredict'] = predict.idxmax(axis='columns').values
 
 # Plotting Testdata and Preidcted Data over Week inkluding a trendline
 fig = px.scatter(dfTrained, x = 'x', y = ['yTest', 'yPredict'],trendline="lowess", trendline_options=dict(frac=0.04))
+fig.show()
+
+
+fig = px.scatter(dfTrained, x = 'x', y = ['yTest', 'yPredict'],
+                 labels={"x": "Continous hours of a week","value": "Availability", "yTest": "hhh", "yPredict": "jökhökjb"},
+                 title = "Testdata vs predicted data",
+                 trendline="lowess", trendline_options=dict(frac=0.04))
 fig.show()
