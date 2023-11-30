@@ -34,6 +34,8 @@ dfPubliBikeAvailability["continuous_week_hours"] = dfPubliBikeAvailability['dayo
 #prepare and Clean Data
 #Choose only the Station 230 = "Sattler-Gelateria"
 dfPubliBikeAvailability = dfPubliBikeAvailability[dfPubliBikeAvailability["station_id"] == 230 ]
+#315 Marzilli
+#dfPubliBikeAvailability = dfPubliBikeAvailability[dfPubliBikeAvailability["station_id"] == 315 ]
 
 
 #Select the relevant data for the basi season (15.05 - 15.09)
@@ -101,9 +103,9 @@ model = tf.keras.models.Sequential([
     tf.keras.layers.Flatten(input_shape=(2,)),
     tf.keras.layers.Dense(1000, activation='relu'),
     tf.keras.layers.Dense(10000, activation='relu'),
-    tf.keras.layers.Dense(1000, activation='relu'),
-    tf.keras.layers.Dense(12, activation='relu'),
-    tf.keras.layers.Dense(3, activation='softmax'),
+    #tf.keras.layers.Dense(1000, activation='relu'),
+    #tf.keras.layers.Dense(12, activation='relu'),
+    tf.keras.layers.Dense(3, activation='sigmoid'),
 ])
 
 model.compile(optimizer='adam',
@@ -113,7 +115,7 @@ model.compile(optimizer='adam',
 print(model.summary())
 
 #Train the model
-availability = model.fit(dfFeatureTrainPB, dfLabelsTrainPB, epochs=2000, batch_size=5000, validation_data=(dfFeaturesTestPB, dfLabelsTestPB))
+availability = model.fit(dfFeatureTrainPB, dfLabelsTrainPB, epochs=1000, batch_size=1000, validation_data=(dfFeaturesTestPB, dfLabelsTestPB))
 
 
 #Ploting the error over epochs
@@ -144,12 +146,12 @@ dfTrained['yTest'] = dfLabelsTestPB
 dfTrained['yPredict'] = predict.idxmax(axis='columns').values
 
 # Plotting Testdata and Preidcted Data over Week inkluding a trendline
-fig = px.scatter(dfTrained, x = 'x', y = ['yTest', 'yPredict'],trendline="lowess", trendline_options=dict(frac=0.04))
+fig = px.scatter(dfTrained, x = 'x', y = ['yTest', 'yPredict'],trendline="lowess", trendline_options=dict(frac=0.08))
 fig.show()
 
 
 fig = px.scatter(dfTrained, x = 'x', y = ['yTest', 'yPredict'],
                  labels={"x": "Continous hours of a week","value": "Availability", "yTest": "hhh", "yPredict": "jökhökjb"},
                  title = "Testdata vs predicted data",
-                 trendline="lowess", trendline_options=dict(frac=0.04))
+                 trendline="lowess", trendline_options=dict(frac=0.08))
 fig.show()
