@@ -1,0 +1,11 @@
+https://opendata.swiss/en/dataset/klimamessnetz-tageswerte
+
+
+ 
+Modellvorhersage - Prévisions numériques - Previsioni numeriche - Numerical forecasts
+ 
+Download URL
+https://data.geo.admin.ch/ch.meteoschweiz.prognosen/punktprognosen/COSMO-E-all-stations.csv   
+ 
+Dateiaufbau - Déscription du fichier - Descrizione del file - File description
+https://data.geo.admin.ch/ch.meteoschweiz.prognosen/punktprognosen/Legende_COSMO-E_all_stations.txt
