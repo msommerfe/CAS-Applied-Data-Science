@@ -1,0 +1,29 @@
+File_type ASCII_TABLE 1.0
+  
+Model_name cosmo-2e
+Type_of_product cosmo-2e_individual_ensemble_member
+Total_number_of_members_in_file 21
+  
+Missing_value_code    -999.0
+Data_separator ;
+
+Field_name      Unit            Description
+---------------------------------------------
+T_2M            deg C           2m air temperature
+FF_10M          m s-1           10m wind speed
+DD_10M          degrees         10m wind direction
+TOT_PREC        kg m-2          Total precipitation
+RELHUM_2M       %               2m relative humidity (with respect to water)
+DURSUN          s               Duration of sunshine
+
+Station information (listed in data file)
+----------------------------------------------
+Indicator	Short name of station    
+Grid_longitude  Longitude of station closest grid point
+Grid_latitude   Latitude of station closest grid point       
+Grid_i		Gridpont number in longitudinal direction         
+Grid_j    	Gridpont number in longitudinal direction
+Grid_height	Height of station closest grid point  
+
+Download URL
+https://data.geo.admin.ch/ch.meteoschweiz.prognosen/punktprognosen/COSMO-E-all-stations.csv   
