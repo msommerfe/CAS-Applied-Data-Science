@@ -4,5 +4,7 @@
     <mapping directory="" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/Module 6 - Deep Learning/labelImg" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/Module 6 - Deep Learning/yolov5" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/Module_6_Deep_Learning/labelImg" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/Module_6_Deep_Learning/yolov5" vcs="Git" />
   </component>
 </project>
